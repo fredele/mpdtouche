@@ -1,0 +1,491 @@
+#:kivy 1.0.9
+#: import ListItemButton kivy.uix.listview.ListItemButton
+#: import main main
+#: import ListAdapter kivy.adapters.listadapter.ListAdapter
+#:import LibraryListWidget main.LibraryListWidget
+
+<Play_Button@Button>:
+<Pause_Button@Button>:
+<Stop_Button@Button>:
+<Previous_Button@Button>:
+<Next_Button@Button>:
+<Player@Screen>:
+<Playlist@Screen>:
+<Params@Screen>:
+
+<Params>:
+    id : Params_widget
+    stats : stats
+    BoxLayout:
+        orientation:'vertical'
+        Label:
+            size_hint_y :None
+            height :200
+            id : stats
+            text:''
+
+
+        Button:
+            size_hint_y :None
+            height :60
+            text:'Update MPD database'
+            marging :(20,20)
+            background_color: (0.3, 0.3, 0.3, 1.0)
+            on_press : app.ParamsControlWidget.on_update()
+        Widget:
+            size_hint_y :None
+            height :70
+            text:''
+
+    BoxLayout:
+        height:50
+        size_hint_y : None
+        orientation:'horizontal'
+        BoxLayout:
+            Button:
+                id:playlist_btn
+                #text:'Player'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press : app.sm.goto_Player()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source:  app.root_dir + "/textures/player.png"
+            Button:
+                id:playlist_btn
+                #text:'Playlist'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press : app.sm.goto_Playlist()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/queue.png"
+            Button:
+                id:library_btn
+                #text:'Library'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press : app.sm.goto_Library()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/library.png"
+
+
+<Player>:
+    id : Player_widget
+    player_cover:player_cover
+    player_slider:player_slider
+    player_artist:player_artist
+    player_album:player_album
+    player_title:player_title
+    player_genre:player_genre
+    player_song_elapsed_time:player_song_elapsed_time
+    player_song_total_time:player_song_total_time
+    play_btn:play_btn
+    play_btn_image :play_btn_image
+    BoxLayout:
+        orientation:'vertical'
+        player_cover:player_cover
+        player_slider:player_slider
+        player_artist:player_artist
+        player_album:player_album
+        player_title:player_title
+        player_genre:player_genre
+        player_song_elapsed_time:player_song_elapsed_time
+        player_song_total_time:player_song_total_time
+        play_btn:play_btn
+        play_btn_image :play_btn_image
+        BoxLayout:
+            player_slider:player_slider
+            player_song_elapsed_time:player_song_elapsed_time
+            player_song_total_time:player_song_total_time
+            orientation:'horizontal'
+            BoxLayout:
+                size_hint_y : 0.7
+                size_hint_x : 0.45
+                pos_hint :{'center_x': 0.5, 'center_y': 0.5}
+                AsyncImage:
+                    stretch : True
+                    id : player_cover
+            BoxLayout:
+                pos_hint :{'center_x': 0.5, 'center_y': 0.5}
+                size_hint_y :1
+                size_hint_x : 0.55
+                player_artist:player_artist
+                player_album:player_album
+                player_title:player_title
+                player_genre:player_genre
+                player_song_elapsed_time:player_song_elapsed_time
+                player_song_total_time:player_song_total_time
+                orientation:'vertical'
+
+                Label:
+                    size_hint_y : 0.40
+                    bold:True
+                    font_size: 25
+                    halign: 'center'
+                    valign: 'middle'
+                    text_size: self.size
+                    id: player_album
+                    text:'Album'
+
+                Label:
+                    font_size: 16
+                    size_hint_y : 0.20
+                    halign: 'center'
+                    valign: 'top'
+                    text_size: self.size
+                    id: player_artist
+                    text:'Artist'
+
+                Label:
+                    font_size: 18
+                    size_hint_y : 0.20
+                    valign: 'top'
+                    halign: 'center'
+                    text_size: self.size
+                    id: player_title
+                    text:'Title'
+
+                Label:
+                    font_size: 14
+
+                    size_hint_y : 0.1
+                    halign: 'center'
+                    valign: 'middle'
+                    text_size: self.size
+                    text_size: self.size
+                    id: player_genre
+                    text:'Genre'
+                BoxLayout:
+                    size_hint_y : 0.07
+
+                    Label:
+                        font_size: 12
+                        text_size: self.size
+                        halign: 'left'
+                        valign: 'bottom'
+                        id: player_song_elapsed_time
+                        text :'00:00:00'
+                    Label:
+                        padding_x:15
+                        font_size: 12
+                        text_size: self.size
+                        halign: 'right'
+                        valign: 'bottom'
+                        id: player_song_total_time
+                        text :'00:00:00'
+                ProgressBar:
+                    padding_x:20
+                    halign: 'center'
+                    valign: 'top'
+                    height : 40
+                    size_hint_y :0.12
+                    size_hint_x : 0.95
+                    id : player_slider
+                    orientation:'horizontal'
+                    min: 0
+                    max:1000
+                    value:0
+                    on_touch_move : app.PlayerControlWidget.on_player_slider_touch_move()
+                Widget:
+                    size_hint_y : 0.12
+        BoxLayout:
+            height:50
+            size_hint_y : None
+            orientation:'horizontal'
+            play_btn:play_btn
+            play_btn_image :play_btn_image
+            BoxLayout:
+
+                Previous_Button:
+                    id:previous_btn
+                    #text:'Previous'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.PlayerControlWidget.on_previous_press()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/previous.png"
+                Play_Button:
+                    id:play_btn
+                    #text:'Play'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.PlayerControlWidget.on_play_press()
+                    Image:
+                        id : play_btn_image
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/play.png"
+
+                Stop_Button:
+                    id:stop_btn
+                    #text:'Stop'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.PlayerControlWidget.on_stop_press()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/stop.png"
+                Next_Button:
+                    id:next_btn
+                    #text:'Next'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.PlayerControlWidget.on_next_press()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/next.png"
+                Button:
+                    id:playlist_btn
+                    #text:'Playlist'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.sm.goto_Playlist()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/queue.png"
+                Button:
+                    id:library_btn
+                    #text:'Library'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.sm.goto_Library()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/library.png"
+                Button:
+                    id:library_btn
+                    #text:'Params'
+                    background_normal :app.root_dir + "/textures/fond.png"
+                    on_press : app.sm.goto_Params()
+                    Image:
+                        size : (30,30)
+                        stretch : False
+                        center_x: self.parent.center_x
+                        center_y: self.parent.center_y
+                        source: app.root_dir + "/textures/params.png"
+
+<Playlist>:
+    id : Playlist_widget
+    playlist_list:playlist_list
+    BoxLayout:
+        orientation:'vertical'
+        playlist_list:playlist_list
+        BoxLayout:
+            height:50
+            size_hint_y : None
+            Label:
+                text:'Playlist'
+                canvas.before:
+                    Rectangle:
+                        pos:self.pos
+                        size:self.size
+                        source :app.root_dir + "/textures/fond.png"
+
+
+        ListView:
+            adapter: ListAdapter(data=[], template='SongListButton',  args_converter=app.song_converter)
+            id : playlist_list
+            item_strings: []
+            selection_mode:'single'
+        BoxLayout:
+            height:50
+            size_hint_y : None
+            Button:
+                text: 'Clear'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press : app.PlaylistControlWidget.Clear_Playlist()
+            Button:
+                #text: 'Player'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press : app.sm.goto_Player()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/player.png"
+            Button:
+                #text: 'Library'
+                background_normal :app.root_dir + "/textures/fond.png"
+                on_press :  app.sm.goto_Library()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/library.png"
+
+<library>:
+    title:title
+    BoxLayout:
+        orientation:'vertical'
+        title:title
+        BoxLayout:
+            height:50
+            size_hint_y : None
+            title:title
+            Label:
+                id : title
+                #text:'Genre'
+                canvas.before:
+                    Rectangle:
+                        pos:self.pos
+                        size:self.size
+                        source :app.root_dir + "/textures/fond.png"
+
+        BoxLayout:
+
+            id : library_widget
+        BoxLayout:
+            orientation:'horizontal'
+            height:50
+            size_hint_y : None
+            Button:
+                background_normal :app.root_dir + "/textures/fond.png"
+                #text: 'Back'
+                on_press : app.LibraryControlWidget.Back()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/back.png"
+            Button:
+                background_normal :app.root_dir + "/textures/fond.png"
+                #text: 'Player'
+                on_press :  app.sm.goto_Player()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/player.png"
+            Button:
+                background_normal :app.root_dir + "/textures/fond.png"
+                #text: 'Playlist'
+                on_press : app.sm.goto_Playlist()
+                Image:
+                    size : (30,30)
+                    stretch : False
+                    center_x: self.parent.center_x
+                    center_y: self.parent.center_y
+                    source: app.root_dir + "/textures/queue.png"
+
+
+
+<LibraryListWidget>:
+    library_list:library_list
+    ListView:
+
+        adapter: ListAdapter(data=[], template='CustomListItem' ,args_converter=app.library_converter)
+        id : library_list
+        item_strings: []
+        selection_mode:'single'
+
+
+<Modal_Add_Box>:
+    add_btn:add_btn
+    play_btn:play_btn
+    size_hint_y : 0.5
+    size_hint_x : 0.5
+    BoxLayout:
+        orientation :'vertical'
+        Button:
+            id : add_btn
+            text:'Add to playlist'
+            on_press :  app.LibraryControlWidget.md.on_add_press()
+        Button:
+            id: play_btn
+            text:'Play'
+            on_press : app.LibraryControlWidget.md.on_play_press()
+
+<Modal_Playlist_Add_Box>:
+    add_btn:add_btn
+    play_btn:play_btn
+    size_hint_y : 0.5
+    size_hint_x : 0.5
+    BoxLayout:
+        orientation :'vertical'
+        Button:
+            id : add_btn
+            text:'Add to playlist'
+            on_press :  app.LibraryControlWidget.mdp.on_add_press()
+        Button:
+            id: play_btn
+            text:'Play'
+            on_press : app.LibraryControlWidget.mdp.on_play_press()
+
+<Modal_No_Connection>:
+    size_hint_y : 0.5
+    size_hint_x : 0.5
+    Label:
+        text:'No connection'
+
+
+[SongListButton@SelectableView+BoxLayout]:
+    size_hint_y: None
+    height:50
+    padding_x:10
+    itembutton:itembutton
+    itemimage:itemimage
+    ListItemButton:
+        id: itembutton
+        markup:True
+        padding_x:10
+        valign:'middle'
+        height:50
+        size_hint_y: 0.8
+        size_hint_x: 0.9
+        song:  ctx.song
+        text: ctx.text
+        text_size: self.size
+        on_press:  app.PlaylistControlWidget.on_SongListButton_press(self)
+    BoxLayout:
+        size_hint_y : 0.8
+        size_hint_x : 0.1
+        pos_hint :{'center_x': 0.5, 'center_y': 0.5}
+        AsyncImage:
+            id : itemimage
+            source: ctx.cover_source
+
+[CustomListItem@SelectableView+BoxLayout]:
+    size_hint_y: None
+    height: 50
+    itemimage : itemimage
+    itembutton :itembutton
+    ListItemButton:
+        id : itembutton
+        padding_x:10
+        valign:'middle'
+        height:50
+        size_hint_y: 0.8
+        size_hint_x: 0.9
+        bold:True
+        text: ctx.text
+        background_color: (0.0, 0.0, 0.0, 1.0)
+        selected_color: (0.0, 0.0, 0.0, 1.0)
+    AsyncImage:
+        size_hint_y : 0.8
+        size_hint_x : 0.1
+        id : itemimage
+        source: ctx.source
