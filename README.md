@@ -12,7 +12,7 @@ There can be various issues, I only spent 5 days to write it, and I'm satisfied 
 I had in mind to build a headless music player with a touchscreen, so I tried to make a GUI for mpd : here it is.
 
 This code should be easely accessible for beginners to hack around.
-To run tha app, launch main.py with python (2.7).
+To run the app, launch main.py with python (2.7).
 
 A web server must run to serve the covers (named "folder.jpg") placed in the same directory as the audio files.
 This could be done with apache or ngingx or whatever with only one config file.
