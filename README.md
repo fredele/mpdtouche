@@ -12,9 +12,15 @@ There can be various issues, I only spent 5 days to write it, and I'm satisfied 
 I had in mind to build a headless music player with a touchscreen, so I tried to make a GUI for mpd : here it is.
 
 
-![Screenshot](https://github.com/fredele/mpdtouche/blob/master/Screenshots/screenshot1.png?raw=true)
-
 
 To run tha app, launch main.py with python (2.7).
 Maybe will there be someone who will get inspired ... (?)
+
+![Screenshot](https://github.com/fredele/mpdtouche/blob/master/Screenshots/screenshot1.png?raw=true)
+
+![Screenshot](https://github.com/fredele/mpdtouche/blob/master/Screenshots/screenshot2.png?raw=true)
+
+![Screenshot](https://github.com/fredele/mpdtouche/blob/master/Screenshots/screenshot3.png?raw=true)
+
+![Screenshot](https://github.com/fredele/mpdtouche/blob/master/Screenshots/screenshot4.png?raw=true)
 
