@@ -1,0 +1,10 @@
+{
+  "podcasts": [
+    {
+	  "name": "Jazzafip",
+      "feedurl": "http://radiofrance-podcast.net/podcast09/rss_12250.xml",
+	  "cover"  : "http://media.radiofrance-podcast.net/podcast09/RF_OMM_0000006380_ITE.jpg"    
+    }
+   
+  ]
+}

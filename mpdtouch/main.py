@@ -1,21 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from kivy.app import App
 import os, urllib, hashlib, time
 from kivy.support import install_twisted_reactor
 install_twisted_reactor()
 from mpd import MPDFactory
 from twisted.internet import reactor
-from kivy.app import App
 from kivy.properties import ObjectProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.modalview import ModalView
+from kivy.uix.listview import ListItemButton
 from kivy.adapters.models import SelectableDataItem
 from kivy.clock import Clock
 from kivy.core.window import Window
 from utils import TimeToHMS , format_to_str,url_exists
 from kivy.factory import Factory
+from PIL import Image
+from parsers.rssparser import  RssParser
+from parsers.xfpsparser import  XspfParser
+import time
+import json
+import alsaaudio
+
 
 current_song = {}
 
@@ -23,10 +31,21 @@ class LibraryListWidget(BoxLayout):
     pass
 Factory.register('LibraryListWidget', LibraryListWidget)
 
-class CustomListItem(SelectableDataItem):
-    def __init__(self):
-        super(CustomListItem, self).__init__()
-        print('create')
+class ListItemButton1(ListItemButton):
+    song = dict
+
+class Modal_Volume(ModalView):
+    def __init__(self,vol):
+        super(Modal_Volume, self).__init__()
+        self.vol = vol
+        self.ids.volume_slider.value = self.vol
+
+    def on_volume_slide(self):
+        if WA.sound_driver == 'alsa':
+            m = alsaaudio.Mixer()
+            m.setvolume(int(self.ids.volume_slider.value))
+        else :
+            WA.protocol.setvol(int(self.ids.volume_slider.value))
 
 
 class Modal_No_Connection(ModalView):
@@ -62,7 +81,6 @@ class Modal_Playlist_Add_Box(ModalView):
         WA.protocol.load(self.result)
         WA.protocol.play()
         self.dismiss()
-        # TODO : afficher la radio ....
 
 
     def on_add_press(self):
@@ -74,9 +92,11 @@ class WidgetListButton(BoxLayout):
     pass
 
 
-class SongListButton(SelectableDataItem):
+class SongListItem(SelectableDataItem):
     pass
 
+class CustomListItem(SelectableDataItem):
+    pass
 
 class Params(Screen):
     def on_update(self):
@@ -105,7 +125,7 @@ class Library(Screen):
             WA.Library_Screen.ids.library_widget.add_widget(self.llw)
             WA.Library_Screen.ids.title.text = 'Sources'
             self.llw.ids.library_list.adapter.bind(on_selection_change=self.Get_Source)
-            sources = ['Genres', 'Albums','Artists','Playlists']
+            sources = ['Genres', 'Albums','Artists','Playlists','Podcasts','Radios']
             self.llw.ids.library_list.adapter.data.extend([item for item in sources])
             self.source = None
 
@@ -113,7 +133,8 @@ class Library(Screen):
         self.genre = None
         self.album = None
         self.artist = None
-
+        self.podcast = None
+        self.radio = None
         if adapter.selection:
             self.source = adapter.selection[0].text
 
@@ -126,7 +147,10 @@ class Library(Screen):
                 WA.protocol.list('artist').addCallback(WA.LibraryControlWidget.Callback_Set_Widget)
             if self.source == 'Playlists':
                 WA.protocol.listplaylists().addCallback(WA.LibraryControlWidget.Callback_Set_Widget)
-
+            if self.source == 'Podcasts':
+                WA.LibraryControlWidget.Callback_Set_Widget('[]')
+            if self.source == 'Radios':
+                WA.LibraryControlWidget.Callback_Set_Widget('[]')
     def Back(self):
         if self.source == 'Genres':
             if self.genre != None and self.artist != None :     #and self.album == None
@@ -153,6 +177,15 @@ class Library(Screen):
         elif self.source == 'Playlists':
             self.Set_Sources()
 
+        elif self.source == 'Podcasts':
+            if self.podcast == None :
+                self.Set_Sources()
+            else :
+                self.podcast = None
+                self.Callback_Set_Widget('')
+
+        elif self.source == 'Radios':
+            self.Set_Sources()
         else:
             pass
 
@@ -246,7 +279,37 @@ class Library(Screen):
             self.llw.ids.library_list.adapter.data.extend([playlist for playlist in result])
             self.llw.ids.library_list.adapter.bind(on_selection_change=self.get_playlist)
 
+        elif self.source == 'Podcasts':
+            with open(WA.root_dir + '/podcasts/podcasts.json') as data:
+                jsondata = json.load(data)
+                WA.Library_Screen.ids.library_widget.clear_widgets()
+                self.llw = LibraryListWidget()
+                WA.Library_Screen.ids.library_widget.add_widget(self.llw)
+                WA.Library_Screen.ids.title.text = 'Podcasts'
+                self.llw.ids.library_list.adapter.data.extend([podcast for podcast in jsondata["podcasts"]])
+                self.llw.ids.library_list.adapter.bind(on_selection_change=self.get_podcast)
 
+        elif self.source == 'Radios':
+            g = XspfParser()
+            g.parseFile(WA.root_dir + '/radios/radios.xspf')
+            radios = g.getResult()
+            for radio in radios['tracklist']:
+                m = hashlib.md5()
+                m.update(radio['location'])
+                WA.cache_file = WA.cache_dir + m.hexdigest() + '.jpg'
+                if  os.path.isfile(WA.cache_file):
+                    pass
+                else:
+                    if radio.has_key('image'):
+                        if url_exists(radio['image']):
+                            urllib.urlretrieve(radio['image'], WA.cache_file)
+
+            WA.Library_Screen.ids.library_widget.clear_widgets()
+            self.llw = LibraryListWidget()
+            WA.Library_Screen.ids.library_widget.add_widget(self.llw)
+            WA.Library_Screen.ids.title.text = 'Radios'
+            self.llw.ids.library_list.adapter.data.extend([radio for radio in radios['tracklist']])
+            self.llw.ids.library_list.adapter.bind(on_selection_change=self.get_radio)
 
         else:
             pass
@@ -257,7 +320,52 @@ class Library(Screen):
             self.mdp = Modal_Playlist_Add_Box(adapter.selection[0].text)
             self.mdp.open()
 
+    def get_radio(self ,adapter):
+        if adapter.selection:
+            WA.protocol.stop()
+            WA.protocol.clear()
+            WA.protocol.add(adapter.selection[0].song['location'])
+            WA.protocol.play()
+            WA.Player_Screen.Clear_Screen()
+            WA.sm.goto_Player()
+            WA.Player_Screen.ids.player_album.text =  adapter.selection[0].text
+            WA.Player_Screen.ids.player_title.text = ''
+            WA.Player_Screen.ids.player_artist.text = ''
+            WA.Player_Screen.ids.player_genre.text = ''
+            if adapter.selection[0].song.has_key('image'):
+                WA.Player_Screen.ids.player_cover.source = WA.get_cover_path(adapter.selection[0].song['image'], True)
 
+    def get_podcast(self ,adapter):
+        if adapter.selection:
+            self.podcast = adapter.selection[0].text
+            content =  urllib.urlopen(adapter.selection[0].song['feedurl'])
+            res = RssParser()
+            res.parseFile(content)
+            resdict = res.getResult()
+            items = resdict['items']
+            self.llw = None
+            WA.Library_Screen.ids.library_widget.clear_widgets()
+            self.llw = LibraryListWidget()
+            WA.Library_Screen.ids.library_widget.add_widget(self.llw)
+            WA.Library_Screen.ids.title.text = 'Podcast : ' + adapter.selection[0].text
+            self.llw.ids.library_list.adapter.bind(on_selection_change=self.set_podcast)
+            self.llw.ids.library_list.adapter.data.extend([item for item in items ])
+            res = None
+            content = None
+
+    def set_podcast(self ,adapter):
+        if adapter.selection:
+            WA.Library_Screen.ids.library_widget.clear_widgets()
+            WA.protocol.stop()
+            WA.protocol.clear()
+            WA.protocol.add(str(adapter.selection[0].song['guid']))
+            WA.protocol.play()
+            WA.Player_Screen.Clear_Screen()
+            WA.sm.goto_Player()
+            WA.Player_Screen.ids.player_album.text =  adapter.selection[0].text
+            WA.Player_Screen.ids.player_title.text = ''
+            WA.Player_Screen.ids.player_artist.text = ''
+            WA.Player_Screen.ids.player_genre.text = ''
 
     def get_artists_from_genre(self ,adapter):
         if adapter.selection:
@@ -281,7 +389,6 @@ class Library(Screen):
             else:
                 WA.protocol.list('file', 'album', self.album ).addCallback(self.Get_files)
 
-
     def Get_files(self, result):
         #print('Get files')
         self.md = Modal_Add_Box(result)
@@ -289,16 +396,16 @@ class Library(Screen):
 
     def Set_album_covers(self,result,i):
         try:
-            cover = 'audio-cd.png'
+            cover =  WA.root_dir +'/textures/audio-cd.png'
             for file in result:
-                if cover == 'audio-cd.png':
+                if cover ==  WA.root_dir +'/textures/audio-cd.png':
                     cover = WA.get_cover_path(file,True)
                     #print self.llw.ids.library_list.adapter.data[i] # ... Le nom de l' album ...
                     self.llw.ids.library_list.adapter.get_view(int(i)).itemimage.source = cover
                 else:
                     break
         except:
-            pass
+            cover == WA.root_dir + '/textures/audio-cd.png'
 
     def Scroll_Playlist(self):
         #print 'scroll'
@@ -311,21 +418,22 @@ class Playlist(Screen):
     def __init__(self, **kwargs):
         super(Playlist, self).__init__(**kwargs)
 
-    def on_SongListButton_press(self,*args):
+    def on_SongListItem_press(self,*args):
         self.Color_Playlist( args[0].song)
         WA.protocol.seekid(int(args[0].song['id']), 0)
 
 
 
     def Color_Playlist(self,current_song):
+        for i in range(0, len(self.playlist_list.adapter.data)):
+            item = self.playlist_list.adapter.get_view(int(i)).ids.itembutton
+            item.background_color = [0.0, 0.0, 0.0, 1]
+            item.selected_color = [0.0, 0.0, 0.0, 1]
+            item.deselected_color = [0.0, 0.0, 0.0, 1]
         try:
-            for i in range(0, len(self.playlist_list.adapter.data)):
-                 item = self.playlist_list.adapter.get_view(int(i)).ids.itembutton
-                 item.background_color = [0.0, 0.0, 0.0, 1]
             if current_song.has_key('pos'):
                 item = self.playlist_list.adapter.get_view(int(current_song['pos'])).ids.itembutton
                 if item is not None:
-
                      item.background_color = (0.8, 0.8, 0.8, 1)
         except:
             pass
@@ -359,21 +467,23 @@ class Player(Screen):
         self.player_song_elapsed_time.text = TimeToHMS(0)
         self.player_song_total_time.text = TimeToHMS(0)
 
-        self.player_artist.text = format_to_str('Artist')
-        self.player_genre.text = format_to_str('Genre')
-        self.player_title.text = format_to_str('Title')
-        self.player_album.text = format_to_str('Album')
-        self.player_cover.source = 'audio-cd.png'
+        self.player_artist.text = format_to_str('')
+        self.player_genre.text = format_to_str('')
+        self.player_title.text = format_to_str('')
+        self.player_album.text = format_to_str('')
+        self.player_cover.source =  WA.root_dir +'/textures/audio-cd.png'
+
+
 
 
     def on_play_press(self):
         if self.PLAY_STATE:
             WA.protocol.pause()
-            WA.PlayerControlWidget.ids.play_btn_image.source = WA.root_dir +'/textures/pause.png'
+            #WA.PlayerControlWidget.ids.play_btn_image.source = WA.root_dir +'/textures/pause.png'
             self.PLAY_STATE = False
         else:
             self.PLAY_STATE = True
-            WA.PlayerControlWidget.ids.play_btn_image.source = WA.root_dir +'/textures/play.png'
+            #WA.PlayerControlWidget.ids.play_btn_image.source = WA.root_dir +'/textures/play.png'
             WA.protocol.play().addCallback(self.CallBack_Play)
         WA.protocol.currentsong().addCallback(self.CallBack_Current_Song)
 
@@ -399,21 +509,37 @@ class Player(Screen):
         pass
 
     def Callback_Status(self, result):
-        if result['state'] == 'play':
-            self.PLAY_STATE = True
-            if result.has_key('time'):
-                if result['state'] == 'play':
+        try:
+            if result['state'] == 'play':
+                if result.has_key('time'):
+                    if result['state'] == 'play':
+                        self.player_slider.max =   int( result['time'].split(':',-1)[1])
+                        self.player_slider.value =  round(float(result['elapsed']))
+                        self.player_song_elapsed_time.text = TimeToHMS(round(float(result['elapsed'])))
+                        self.player_song_total_time.text = TimeToHMS(int( result['time'].split(':',-1)[1]))
+                        self.play_btn_image.source =  WA.root_dir + "/textures/play.png"
+            elif result['state'] == 'pause':
+                self.play_btn_image.source = WA.root_dir + "/textures/pause.png"
+            if result.has_key('song'):
+                if  self.songid  !=  result['song']:
+                    self.songid  = result['song']
+                    #print('song changed !')
 
-                    self.player_slider.max =   int( result['time'].split(':',-1)[1])
-                    self.player_slider.value =  round(float(result['elapsed']))
-                    self.player_song_elapsed_time.text = TimeToHMS(round(float(result['elapsed'])))
-                    self.player_song_total_time.text = TimeToHMS(int( result['time'].split(':',-1)[1]))
-        if result.has_key('song'):
-            if  self.songid  !=  result['song']:
-                self.songid  = result['song']
-                #print('song changed !')
+                    WA.protocol.currentsong().addCallback(self.CallBack_Current_Song)
 
-                WA.protocol.currentsong().addCallback(self.CallBack_Current_Song)
+            if result.has_key('volume'):
+                self.volume  = result['volume']
+
+
+        except:
+            pass
+
+    def on_volume_press(self):
+        if WA.sound_driver == 'alsa':
+            m = alsaaudio.Mixer()
+            self.volume = m.getvolume()[0]
+        self.md = Modal_Volume( self.volume)
+        self.md.open()
 
     def CallBack_Play(self,result):
         pass
@@ -436,22 +562,32 @@ class Player(Screen):
         if current_song.has_key('time'):
             self.player_slider.max = int(current_song['time'])
             WA.PlaylistControlWidget.Color_Playlist(current_song)
-        #if current_song.has_key('pos'):
-           # WA.Playlist_Screen.ids.playlist_list.scroll_to(max(int(current_song['pos'])-2,0))
-        if current_song.has_key('artist'):
-            self.player_artist.text = format_to_str(current_song['artist'])
-        if current_song.has_key('genre'):
-            self.player_genre.text = format_to_str(current_song['genre'])
-        if current_song.has_key('title'):
-            self.player_title.text = format_to_str(current_song['title'])
+
         if current_song.has_key('album'):
             self.player_album.text = format_to_str(current_song['album'])
+        elif current_song.has_key('file'):
+            self.player_album.text = WA.get_title_from_stream(format_to_str(current_song['file']))
+        else:
+            self.player_album.text = ''
+
+        if current_song.has_key('genre'):
+            self.player_genre.text = format_to_str(current_song['genre'])
+        else:
+            self.player_genre.text =''
+        if current_song.has_key('title'):
+            self.player_title.text = format_to_str(current_song['title'])
+        else:
+            self.player_title.text = ''
+        if current_song.has_key('artist'):
+            self.player_artist.text = format_to_str(current_song['artist'])
+        else:
+            self.player_artist.text = ''
         if current_song.has_key('file'):
-            #print(current_song['file'])
             try:
                 self.player_cover.source = WA.get_cover_path(current_song['file'],False)
             except:
                 pass
+        WA.PlaylistControlWidget.Color_Playlist(current_song )
 
     def on_connection(self, connection):
         self.print_message("connected successfully!")
@@ -462,12 +598,19 @@ class ScreenManager(ScreenManager):
     def goto_Playlist(self):
         WA.protocol.playlistinfo().addCallback(WA.PlayerControlWidget.CallBack_playlist)
         WA.protocol.currentsong().addCallback(WA.PlayerControlWidget.CallBack_Current_Song)
+
+        for i in range(0, len( WA.PlaylistControlWidget.ids.playlist_list.adapter.data)):
+            item = WA.PlaylistControlWidget.ids.playlist_list.adapter.get_view(int(i)).ids.itembutton
+            item.background_color = [0.0, 0.0, 0.0, 1]
+            item.selected_color = [0.0, 0.0, 0.0, 1]
+            item.deselected_color = [0.0, 0.0, 0.0, 1]
         self.current = 'Playlist'
 
     def goto_Player(self):
         self.current = 'Player'
 
     def goto_Library(self):
+        WA.Library_Screen.Set_Sources()
         self.current = 'Library'
 
     def goto_Params(self):
@@ -480,6 +623,7 @@ class MpdtouchApp(App):
     protocol = None
     connection_status = False
     No_Connection = False
+    referenced_streams = []
 
     def __init__(self):
         super(MpdtouchApp, self).__init__()
@@ -531,23 +675,47 @@ class MpdtouchApp(App):
         elif data_item.has_key('file'):
             return {'song': data_item,
                     'cover_source': self.get_cover_path(data_item['file'],True),
-                    'text':
-                        format_to_str(data_item['file'])
-
+                    'text': '[b]' + WA.get_title_from_stream (format_to_str(data_item['file'])) + '[/b]'
                     }
 
 
     def library_converter(self,index, data_item):
         #print data_item
         if isinstance(data_item, basestring):
-            return {'is_selected': False, 'text': data_item, 'source': 'audio-cd.png'}
+            return {'text': data_item, 'source':  WA.root_dir +'/textures/audio-cd.png', 'song': ''}
         if isinstance(data_item, dict) and data_item.has_key('playlist'):
-            return {'is_selected': False, 'text': data_item['playlist'], 'source': 'audio-cd.png'}
+            return { 'text': data_item['playlist'], 'source':  WA.root_dir +'/textures/audio-cd.png', 'song': ''}
+
+        if isinstance(data_item, dict) and data_item.has_key('feedurl'):  #podcasts
+            return { 'text': data_item['name'], 'source': self.get_cover_path(data_item['cover'],True), 'song' :data_item }
+
+        if isinstance(data_item, dict) and data_item.has_key('pubDate'):  #podcast
+            return { 'text': data_item['title'], 'source':  WA.root_dir +'/textures/audio-cd.png', 'song' :data_item }
+
+        if isinstance(data_item, dict) and data_item.has_key('location'):  #radio
+            if data_item.has_key('image'):
+                return { 'text': data_item['title'], 'source':  self.get_cover_path(data_item['image'],True) , 'song' :data_item }
+            else :
+                return {'text': data_item['title'], 'source' : WA.root_dir +'/textures/audio-cd.png' ,'song': data_item}
 
     def get_cover_path(self,filepath,cache):
+        '''
+        :param filepath: a url or a local filepath
+        :param cache: if True, returns the cached file, else the real url.
+        :return:
+        '''
         try:
-            dir_path = urllib.quote(os.path.dirname(filepath.encode('UTF-8')))
-            url = WA.cover_base_url + dir_path + '/folder.jpg'
+            if not filepath.startswith("http"):
+                dir_path = urllib.quote(os.path.dirname(filepath.encode('UTF-8')))
+                url = WA.cover_base_url + dir_path + '/folder.jpg'
+            elif filepath.endswith(".jpg"):
+                url = filepath
+            elif filepath.endswith(".mp3"):
+                # stream mp3
+                url = filepath
+                cache = True
+            else:
+                url = WA.root_dir + '/textures/audio-cd.png'
             m = hashlib.md5()
             m.update(url)
             cache_file = self.cache_dir + m.hexdigest()+'.jpg'
@@ -555,15 +723,42 @@ class MpdtouchApp(App):
                 #print 'get cached file ...'
                 return cache_file
             else:
-                if url_exists(url):
+                if url_exists(url) and url.endswith(".jpg"):
                     urllib.urlretrieve(url, cache_file)
+                    # create thumbnails
+                    size = 128, 128
+                    im = Image.open(cache_file)
+                    im.thumbnail(size, Image.ANTIALIAS)
+                    im.save( cache_file, "JPEG")
+
                     #print 'get from Web server ...'
                     return url
                 else:
-                    return 'audio-cd.png'
+                    return  WA.root_dir +'/textures/audio-cd.png'
         except:
-            return 'audio-cd.png'
+            return  WA.root_dir +'/textures/audio-cd.png'
 
+    def read_radio(self):
+        g = XspfParser()
+        g.parseFile(WA.root_dir + '/radios/radios.xspf')
+        radios = g.getResult()
+        for radio in radios['tracklist']:
+            item = {}
+            if radio.has_key('title'):
+                item['title'] = radio['title']
+            if radio.has_key('image'):
+                item['image'] = radio['image']
+            if radio.has_key('location'):
+                item['url']   = radio['location']
+            item['type'] =  'radio'
+            self.referenced_streams.append(item)
+    def get_title_from_stream(self, stream):
+        res = stream
+        for item in self.referenced_streams:
+            if item.has_key('url'):
+                if item['url'] == stream:
+                    res = item['title']
+        return res
 
     def build_settings(self, settings):
         settings.add_json_panel("Settings", self.config, data="""
@@ -587,6 +782,11 @@ class MpdtouchApp(App):
     "title": "MPD Port",
     "section": "mpd",
     "key": "port"
+    },
+    {"type": "string",
+    "title": "Sound driver:         set to 'alsa' to drive master volume or whatever to drive mpd's internal volume",
+    "section": "sound",
+    "key": "driver"
     }
     ]"""
                                 )
@@ -597,13 +797,17 @@ class MpdtouchApp(App):
         config.setdefaults('Cover', {'cache_dir': os.getenv("HOME") + '/.cache/thumbnails/large/'})
         config.setdefaults('mpd', {'port': '6600'})
         config.setdefaults('mpd', {'host': '127.0.0.1'})
+        config.setdefaults('sound', {'driver': 'alsa'})
 
     def build(self):
+
+        self.read_radio()
         # Get configuration
         self.cover_base_url = self.config.getdefault("Cover", "baseurl", "http://covers.fr/")
         self.cache_dir = self.config.getdefault("Cover", "cache_dir", os.getenv("HOME") + '/.cache/thumbnails/large/')
         self.mpd_port = self.config.getdefault("mpd", "port", "6600")
         self.mpd_host = self.config.getdefault("mpd", "host", "127.0.0.1")
+        self.sound_driver = self.config.getdefault("sound", "driver", "alsa")
 
         self.connect_to_server()
         self.sm = ScreenManager()
@@ -619,13 +823,20 @@ class MpdtouchApp(App):
         self.Playlist_Screen =  self.sm.get_screen('Playlist')
         self.Player_Screen =  self.sm.get_screen('Player')
         self.Library_Screen = self.sm.get_screen('Library')
-        self.PlayerControlWidget.ids.player_cover.source = 'audio-cd.png'
+        self.PlayerControlWidget.ids.player_cover.source =  WA.root_dir +'/textures/audio-cd.png'
         Clock.schedule_interval(self.schedule_tick, self.Schedule_time)
+        Clock.schedule_interval(self.schedule_tick_10, 10 * self.Schedule_time)
         coef = 0.71
         Window.size = (800 * coef, 480 * coef)
         #self._keyboard = Window.request_keyboard(self._keyboard_closed, self.sm, 'text')
         #self._keyboard.bind(on_key_down=self._on_keyboard_down)
         return self.sm
+
+    def schedule_tick_10(self,dt):
+        try:
+            self.protocol.currentsong().addCallback(self.PlayerControlWidget.CallBack_Current_Song)
+        except:
+            pass
 
     def schedule_tick(self,dt):
         try:

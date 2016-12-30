@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
+	<title>Liste de lecture</title>
+	<trackList>
+		<track>
+			<location>http://direct.fipradio.fr/live/fipstrasbourg-midfi.mp3</location>
+			<title>FIP Strasbourg</title>
+			<image>http://www.fipradio.fr/sites/all/themes/custom/fip/fb_share_logo.jpg</image>
+		</track>
+		<track>
+			<location>http://streaming.radio.rtl.fr/rtl-1-48-192</location>
+			<title>RTL</title>
+			<image>http://www.jinglenews.com/images/featured/rtl.jpg</image>
+		</track>
+		<track>
+			<location>http://chai5she.lb.vip.cdn.dvmr.fr/francemusique-midfi.mp3</location>
+			<title>France Musique</title>
+			<image>http://naaba.fr/wp-content/uploads/2015/05/France-Musique-la-radio-musique-classique-e1431169322242.jpg</image>
+		</track>
+		<track>
+			<location>http://chai5she.lb.vip.cdn.dvmr.fr/franceinfo-lofi.mp3</location>
+			<title>France Info</title>
+			<image>http://www.strategie.gouv.fr/sites/strategie.gouv.fr/files/thumbnails/image/franceinfo1.jpg</image>
+		</track>
+		<track>
+			<location>http://direct.franceinter.fr/live/franceinter-midfi.mp3</location>
+			<title>France Inter</title>
+			<image>http://mouves.org/Mouves2015/wp-content/uploads/2012/08/Logo-France-Inter-Une-Mouve.jpg</image>
+		</track>
+		<track>
+			<location>http://direct.francebleu.fr/live/fbalsace-midfi.mp3</location>
+			<title>France Bleu Alsace</title>
+			<image>https://www.francebleu.fr/img/logo-france-bleu-seo.jpg</image>
+		</track>
+
+		<track>
+			<location>http://96.56.32.46:8002</location>
+			<title>Latin Jazz Radio</title>
+		</track>
+	</trackList>
+</playlist>
